@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     {% block head %}{% endblock %}
 </head>
-<body>
+<body data-url-prefix="{{ config.URL_PREFIX or '' }}">
     <nav class="navbar">
         <div class="container nav-inner">
             <a href="{{ url_for('main.index') }}" class="nav-brand">

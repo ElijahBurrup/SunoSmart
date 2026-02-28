@@ -153,6 +153,25 @@ a:hover { color: var(--accent-hover); }
 }
 .result-answer p { margin-bottom: 12px; }
 .result-answer a { color: var(--accent); word-break: break-all; }
+.result-answer a.yt-link {
+    display: inline-block;
+    background: var(--accent-glow);
+    color: var(--accent);
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: all var(--transition);
+    border: 1px solid rgba(0, 212, 170, 0.25);
+    margin: 4px 0;
+}
+.result-answer a.yt-link:hover {
+    background: rgba(0, 212, 170, 0.25);
+    color: var(--accent-hover);
+    border-color: var(--accent);
+}
+.result-answer a.citation-link { font-family: 'Space Grotesk', monospace; }
 
 .result-citations {
     border-top: 1px solid var(--border);
@@ -167,14 +186,17 @@ a:hover { color: var(--accent-hover); }
     margin-bottom: 12px;
 }
 .citation-card {
+    display: block;
+    text-decoration: none;
     background: var(--bg-secondary);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     padding: 14px 16px;
     margin-bottom: 8px;
-    transition: border-color var(--transition);
+    transition: all var(--transition);
+    cursor: pointer;
 }
-.citation-card:hover { border-color: var(--accent); }
+.citation-card:hover { border-color: var(--accent); background: rgba(0, 212, 170, 0.05); transform: translateX(4px); }
 .citation-card .timestamp {
     display: inline-block;
     background: var(--accent-glow);
@@ -366,6 +388,32 @@ a:hover { color: var(--accent-hover); }
 .article-full .content p { margin-bottom: 14px; }
 .article-full .content a { color: var(--accent); }
 .article-full .content strong { color: var(--text-primary); }
+.article-sources {
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+    margin-top: 24px;
+}
+.article-sources h3 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+.source-link {
+    display: block;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: all var(--transition);
+}
+.source-link:hover { border-color: var(--accent); color: var(--accent); transform: translateX(4px); }
+.source-link .play-icon { color: var(--accent); margin-right: 8px; }
 
 /* Pagination */
 .pagination {

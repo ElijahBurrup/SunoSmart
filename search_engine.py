@@ -82,8 +82,8 @@ def keyword_search(query, context_window=None, max_results=None):
 
             if all(kw in window_text for kw in keywords):
                 context_text = " ".join(s["text"] for s in segments[start_idx:end_idx])
-                # Offset timestamp 5-10 seconds earlier for better context
-                adjusted_start = max(0, seg["start"] - 8)
+                # Offset timestamp 5 seconds earlier for context
+                adjusted_start = max(0, seg["start"] - 5)
                 results.append({
                     "video_id": vid,
                     "video_title": title,

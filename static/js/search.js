@@ -1,5 +1,6 @@
 /* SunoSmart — Search and Suggest AJAX handlers */
 
+const URL_PREFIX = document.body.dataset.urlPrefix || '';
 const searchForm = document.getElementById('searchForm');
 const searchInput = document.getElementById('searchInput');
 const searchBtn = document.getElementById('searchBtn');
@@ -23,7 +24,7 @@ searchForm.addEventListener('submit', async (e) => {
         </div>`;
 
     try {
-        const res = await fetch('/search', {
+        const res = await fetch(URL_PREFIX + '/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ query }),
@@ -42,39 +43,67 @@ searchForm.addEventListener('submit', async (e) => {
 });
 
 function renderResults(data) {
-    // Convert markdown-style links in the answer to HTML
-    let answer = escapeHtml(data.answer);
-    // Convert [MM:SS] "Title" - URL patterns to clickable links
-    answer = answer.replace(
-        /\[(\d+:\d+)\]\s*(?:&quot;|")?([^"&]+?)(?:&quot;|")?\s*-?\s*(https:\/\/youtube\.com\/watch\?v=[^\s<]+)/g,
-        '<a href="$3" target="_blank" rel="noopener">[$1] $2</a>'
-    );
-    // Convert bare YouTube URLs
-    answer = answer.replace(
-        /(https:\/\/youtube\.com\/watch\?v=[^\s<]+)/g,
-        (match) => `<a href="${match}" target="_blank" rel="noopener">${match}</a>`
-    );
+    // Parse the raw answer text — find citations and bare URLs, escape everything else
+    const raw = data.answer;
+    const citationRe = /\[(\d+:\d+)\]\s*"([^"]+)"\s*-?\s*(https:\/\/youtube\.com\/watch\?v=[^\s]+)/g;
+    const bareUrlRe = /(https:\/\/youtube\.com\/watch\?v=[^\s]+)/g;
+
+    // First pass: collect all citation spans so we can skip them in the bare-URL pass
+    const citationSpans = [];
+    let m;
+    while ((m = citationRe.exec(raw)) !== null) {
+        citationSpans.push({ start: m.index, end: m.index + m[0].length,
+            ts: m[1], title: m[2], url: m[3] });
+    }
+
+    // Build HTML by walking through the text
+    let html = '';
+    let pos = 0;
+
+    function addText(text) {
+        // Within a text segment, linkify bare YouTube URLs that aren't already part of a citation
+        let last = 0;
+        let um;
+        const localRe = new RegExp(bareUrlRe.source, 'g');
+        while ((um = localRe.exec(text)) !== null) {
+            html += escapeHtml(text.substring(last, um.index));
+            html += `<a href="${um[1]}" target="_blank" rel="noopener" class="yt-link">${escapeHtml(um[1])}</a>`;
+            last = um.index + um[0].length;
+        }
+        html += escapeHtml(text.substring(last));
+    }
+
+    for (const span of citationSpans) {
+        // Add any text before this citation
+        if (span.start > pos) addText(raw.substring(pos, span.start));
+        // Add the citation as a clickable link
+        html += `<a href="${span.url}" target="_blank" rel="noopener" class="yt-link citation-link">&#9654; [${escapeHtml(span.ts)}] ${escapeHtml(span.title)}</a>`;
+        pos = span.end;
+    }
+    // Add remaining text
+    if (pos < raw.length) addText(raw.substring(pos));
+
     // Convert newlines to paragraphs
-    answer = answer.split('\n').filter(l => l.trim()).map(l => `<p>${l}</p>`).join('');
+    html = html.split('\n').filter(l => l.trim()).map(l => `<p>${l}</p>`).join('');
 
-    let html = `<div class="result-answer">${answer}`;
+    let result = `<div class="result-answer">${html}`;
 
+    // Citation cards at the bottom
     if (data.citations && data.citations.length > 0) {
-        html += `<div class="result-citations">
-            <h4>Sources</h4>`;
+        result += `<div class="result-citations"><h4>Sources</h4>`;
         for (const c of data.citations) {
-            html += `
-            <a href="${escapeHtml(c.url)}" target="_blank" rel="noopener" class="citation-card" style="display:block;text-decoration:none">
-                <span class="timestamp">${escapeHtml(c.timestamp)}</span>
+            result += `
+            <a href="${c.url}" target="_blank" rel="noopener" class="citation-card">
+                <span class="timestamp">&#9654; ${escapeHtml(c.timestamp)}</span>
                 <span class="video-title">${escapeHtml(c.video_title)}</span>
                 <div class="context">${escapeHtml((c.context || '').substring(0, 200))}</div>
             </a>`;
         }
-        html += `</div>`;
+        result += `</div>`;
     }
 
-    html += `</div>`;
-    searchResults.innerHTML = html;
+    result += `</div>`;
+    searchResults.innerHTML = result;
 }
 
 function escapeHtml(text) {
@@ -94,7 +123,7 @@ suggestForm.addEventListener('submit', async (e) => {
     suggestMsg.className = 'suggest-msg';
 
     try {
-        const res = await fetch('/suggest', {
+        const res = await fetch(URL_PREFIX + '/suggest', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url }),

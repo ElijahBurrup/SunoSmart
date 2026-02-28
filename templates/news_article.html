@@ -8,6 +8,16 @@
         <div class="date">{{ article['generated_date'] }}</div>
         <h1>{{ article['title'] }}</h1>
         <div class="content">{{ article['content'] | safe }}</div>
+        {% if source_videos %}
+        <div class="article-sources">
+            <h3>Sources</h3>
+            {% for v in source_videos %}
+            <a href="https://youtube.com/watch?v={{ v.video_id }}" target="_blank" rel="noopener" class="source-link">
+                <span class="play-icon">&#9654;</span> {{ v.title }}
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
     </div>
     <div style="margin-top:24px;text-align:center">
         <a href="{{ url_for('main.news_archive') }}">&larr; Back to News Archive</a>

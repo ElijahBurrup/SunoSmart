@@ -116,7 +116,19 @@ def news_article(article_id):
     article = database.get_news_article(article_id)
     if not article:
         return render_template("error.html", message="Article not found"), 404
-    return render_template("news_article.html", article=article)
+    # Resolve source video IDs to titles for the Sources section
+    import json as json_mod
+    source_videos = []
+    if article["sources_referenced"]:
+        try:
+            video_ids = json_mod.loads(article["sources_referenced"])
+            for vid in video_ids:
+                t = database.get_transcript_by_video_id(vid)
+                if t:
+                    source_videos.append({"video_id": vid, "title": t["title"]})
+        except (json_mod.JSONDecodeError, TypeError):
+            pass
+    return render_template("news_article.html", article=article, source_videos=source_videos)
 
 
 # === ADMIN ROUTES ===
@@ -242,6 +254,10 @@ def create_app():
             return AdminUser(row)
         return None
 
+    @flask_app.context_processor
+    def inject_config():
+        return {"config": config}
+
     # Initialize DB and scheduler
     database.initialize_db()
     sched_module.init_scheduler()
@@ -263,4 +279,4 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=6001)
