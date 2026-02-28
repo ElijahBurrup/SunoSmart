@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero">
+    <h1>SunoSmart</h1>
+    <p>Your AI-powered Suno knowledge base. Ask anything about Suno AI and get answers with exact video timestamps.</p>
+
+    <div class="search-box">
+        <form id="searchForm">
+            <input type="text" class="search-input" id="searchInput"
+                   placeholder="How do I pitch down a whole octave?" autocomplete="off">
+            <button type="submit" class="search-btn" id="searchBtn">Search</button>
+        </form>
+    </div>
+
+    <div class="search-results" id="searchResults"></div>
+</div>
+
+{% if news %}
+<div class="container section">
+    <div class="section-header">
+        <h2><span class="icon">&#9889;</span> Today's Discoveries</h2>
+        <a href="{{ url_for('news_archive') }}">View All News &rarr;</a>
+    </div>
+    <div class="news-grid">
+        {% for article in news %}
+        <a href="{{ url_for('news_article', article_id=article['id']) }}" class="news-card">
+            <div class="date">{{ article['generated_date'] }}</div>
+            <h3>{{ article['title'] }}</h3>
+            <p>{{ article['summary'] or '' }}</p>
+            <span class="read-more">Read more &rarr;</span>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="container">
+    <div class="suggest-section">
+        <h2>Suggest a Source</h2>
+        <p>Know a great Suno YouTube channel or tutorial? Help grow the knowledge base.</p>
+        <form class="suggest-form" id="suggestForm">
+            <input type="text" class="suggest-input" id="suggestInput"
+                   placeholder="Paste a YouTube channel or video URL...">
+            <button type="submit" class="suggest-btn">Submit</button>
+        </form>
+        <div class="suggest-msg" id="suggestMsg"></div>
+        <div class="suggest-hint">Sources with 10+ unique suggestions are auto-added to the knowledge base.</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/search.js') }}"></script>
+{% endblock %}

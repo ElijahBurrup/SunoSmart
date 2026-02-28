@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top:40px">
+    <h2 style="margin-bottom:24px">Admin Dashboard</h2>
+
+    <!-- Stats -->
+    <div class="stat-grid">
+        <div class="stat-card">
+            <div class="number">{{ transcripts | length }}</div>
+            <div class="label">Videos Indexed</div>
+        </div>
+        <div class="stat-card">
+            <div class="number">{{ stats['total_searches'] or 0 }}</div>
+            <div class="label">Total Searches</div>
+        </div>
+        <div class="stat-card">
+            <div class="number">{{ stats['unique_users'] or 0 }}</div>
+            <div class="label">Unique Users</div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="admin-card">
+        <h3>Quick Actions</h3>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <form method="POST" action="{{ url_for('admin_trigger_scan') }}" style="display:inline">
+                <button type="submit" class="btn btn-primary">Run Channel Scan</button>
+            </form>
+            <form method="POST" action="{{ url_for('admin_trigger_news') }}" style="display:inline">
+                <button type="submit" class="btn btn-amber">Generate News</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Source -->
+    <div class="admin-card">
+        <h3>Add Source</h3>
+        <form method="POST" action="{{ url_for('admin_add_source') }}">
+            <label>Source Type</label>
+            <select name="type">
+                <option value="channel">YouTube Channel</option>
+                <option value="video">YouTube Video</option>
+            </select>
+            <label>URL</label>
+            <input type="text" name="url" placeholder="https://www.youtube.com/channel/..." required>
+            <label>Name (optional)</label>
+            <input type="text" name="name" placeholder="Channel display name">
+            <button type="submit" class="btn btn-primary" style="margin-top:4px">Add Source</button>
+        </form>
+    </div>
+
+    <!-- Active Sources -->
+    <div class="admin-card">
+        <h3>Active Sources ({{ sources | length }})</h3>
+        {% if sources %}
+        <table>
+            <thead><tr><th>Type</th><th>Name</th><th>URL</th><th>Last Scanned</th></tr></thead>
+            <tbody>
+            {% for s in sources %}
+            <tr>
+                <td>{{ s['type'] }}</td>
+                <td>{{ s['channel_name'] or '-' }}</td>
+                <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis">{{ s['url'] }}</td>
+                <td>{{ s['last_scanned_at'] or 'Never' }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color:var(--text-muted)">No active sources yet.</p>
+        {% endif %}
+    </div>
+
+    <!-- Suggestions -->
+    <div class="admin-card">
+        <h3>Pending Suggestions</h3>
+        {% if suggestions %}
+        <table>
+            <thead><tr><th>URL</th><th>Votes</th><th>First Seen</th><th>Action</th></tr></thead>
+            <tbody>
+            {% for s in suggestions %}
+            <tr>
+                <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis">{{ s['sample_url'] }}</td>
+                <td>{{ s['unique_users'] }}</td>
+                <td>{{ s['first_suggested'] }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('admin_approve_suggestion', normalized=s['normalized_url']) }}" style="display:inline">
+                        <button type="submit" class="btn btn-primary btn-sm">Approve</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color:var(--text-muted)">No pending suggestions.</p>
+        {% endif %}
+    </div>
+
+    <!-- Recent Transcripts -->
+    <div class="admin-card">
+        <h3>Indexed Videos ({{ transcripts | length }})</h3>
+        {% if transcripts %}
+        <table>
+            <thead><tr><th>Title</th><th>Segments</th><th>Added</th></tr></thead>
+            <tbody>
+            {% for t in transcripts[:20] %}
+            <tr>
+                <td>{{ t['title'] }}</td>
+                <td>{{ t['segment_count'] }}</td>
+                <td>{{ t['created_at'][:10] }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color:var(--text-muted)">No transcripts indexed yet.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

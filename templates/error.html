@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Error{% endblock %}
+
+{% block content %}
+<div class="error-page">
+    <h1>Oops</h1>
+    <p>{{ message or "Something went wrong." }}</p>
+    <p style="margin-top:24px"><a href="{{ url_for('index') }}">Back to Home</a></p>
+</div>
+{% endblock %}
