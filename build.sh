@@ -5,7 +5,7 @@ set -e
 echo "Installing dependencies..."
 pip install -r requirements.txt
 
-echo "Running database migration..."
+echo "Running seed migration..."
 python migrate_existing.py
 
 echo "Build complete!"

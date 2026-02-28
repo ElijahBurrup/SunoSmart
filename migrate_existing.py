@@ -13,9 +13,7 @@ load_dotenv()
 import config
 import database
 
-EXISTING_DIR = os.path.join(
-    os.path.dirname(__file__), "..", "SunoKnowledgeBase"
-)
+EXISTING_DIR = os.path.join(os.path.dirname(__file__), "seed_data")
 EXISTING_INDEX = os.path.join(EXISTING_DIR, "index.json")
 EXISTING_TRANSCRIPTS = os.path.join(EXISTING_DIR, "transcripts")
 
