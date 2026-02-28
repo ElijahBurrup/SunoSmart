@@ -1,12 +1,13 @@
 """SunoSmart — AI-powered Suno knowledge base."""
 import hashlib
+import os
 import re
 from urllib.parse import urlparse, parse_qs
 
 from dotenv import load_dotenv
 load_dotenv()
 
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
+from flask import Flask, Blueprint, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -15,33 +16,8 @@ import database
 import search_engine
 import scheduler as sched_module
 
-app = Flask(__name__, static_folder="static", template_folder="templates")
-app.secret_key = config.FLASK_SECRET_KEY
-
-# Flask-Login setup
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = "admin_login"
-
-
-class AdminUser(UserMixin):
-    def __init__(self, admin_row):
-        self.id = admin_row["id"]
-        self.email = admin_row["email"]
-
-
-@login_manager.user_loader
-def load_user(user_id):
-    conn = database.get_connection()
-    row = conn.execute("SELECT * FROM admins WHERE id = ?", (user_id,)).fetchone()
-    if row:
-        return AdminUser(row)
-    return None
-
-
-# --- Initialize on startup ---
-database.initialize_db()
-sched_module.init_scheduler()
+# --- Blueprint for all routes (supports URL_PREFIX) ---
+bp = Blueprint("main", __name__)
 
 
 # --- URL Normalization ---
@@ -75,13 +51,13 @@ def normalize_youtube_url(url):
 
 # === PUBLIC ROUTES ===
 
-@app.route("/")
+@bp.route("/")
 def index():
     news = database.get_latest_news(limit=3)
     return render_template("index.html", news=news)
 
 
-@app.route("/search", methods=["POST"])
+@bp.route("/search", methods=["POST"])
 def search_route():
     data = request.get_json() or {}
     query = data.get("query", "").strip()
@@ -96,7 +72,7 @@ def search_route():
     return jsonify(result)
 
 
-@app.route("/suggest", methods=["POST"])
+@bp.route("/suggest", methods=["POST"])
 def suggest_route():
     data = request.get_json() or {}
     url = data.get("url", "").strip()
@@ -119,7 +95,6 @@ def suggest_route():
     # Auto-approve at 10 unique users
     if count and count >= 10:
         database.auto_approve_suggestion(normalized)
-        # TODO: automatically add as a source and trigger scan
         return jsonify({"message": "This source just hit 10 votes and has been auto-approved!", "count": count})
 
     return jsonify({
@@ -128,7 +103,7 @@ def suggest_route():
     })
 
 
-@app.route("/news")
+@bp.route("/news")
 def news_archive():
     page = request.args.get("page", 1, type=int)
     articles, total = database.get_news_archive(page=page)
@@ -136,7 +111,7 @@ def news_archive():
     return render_template("news_archive.html", articles=articles, page=page, total_pages=total_pages)
 
 
-@app.route("/news/<int:article_id>")
+@bp.route("/news/<int:article_id>")
 def news_article(article_id):
     article = database.get_news_article(article_id)
     if not article:
@@ -146,7 +121,7 @@ def news_article(article_id):
 
 # === ADMIN ROUTES ===
 
-@app.route("/admin/login", methods=["GET", "POST"])
+@bp.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
     if request.method == "POST":
         email = request.form.get("email", "").strip()
@@ -154,12 +129,12 @@ def admin_login():
         admin = database.get_admin_by_email(email)
         if admin and check_password_hash(admin["password_hash"], password):
             login_user(AdminUser(admin))
-            return redirect(url_for("admin_dashboard"))
+            return redirect(url_for("main.admin_dashboard"))
         flash("Invalid credentials", "error")
     return render_template("admin/login.html")
 
 
-@app.route("/admin/dashboard")
+@bp.route("/admin/dashboard")
 @login_required
 def admin_dashboard():
     sources = database.get_active_sources()
@@ -171,7 +146,7 @@ def admin_dashboard():
                            stats=stats, transcripts=transcripts)
 
 
-@app.route("/admin/sources", methods=["POST"])
+@bp.route("/admin/sources", methods=["POST"])
 @login_required
 def admin_add_source():
     url = request.form.get("url", "").strip()
@@ -193,61 +168,99 @@ def admin_add_source():
         added_by="admin",
     )
     flash(f"Source added: {url}", "success")
-    return redirect(url_for("admin_dashboard"))
+    return redirect(url_for("main.admin_dashboard"))
 
 
-@app.route("/admin/suggestions/<normalized>/approve", methods=["POST"])
+@bp.route("/admin/suggestions/<path:normalized>/approve", methods=["POST"])
 @login_required
 def admin_approve_suggestion(normalized):
     database.approve_suggestion(normalized)
     flash("Suggestion approved", "success")
-    return redirect(url_for("admin_dashboard"))
+    return redirect(url_for("main.admin_dashboard"))
 
 
-@app.route("/admin/scan", methods=["POST"])
+@bp.route("/admin/scan", methods=["POST"])
 @login_required
 def admin_trigger_scan():
     from channel_scanner import scan_channels
     new_videos = scan_channels()
     flash(f"Scan complete: {len(new_videos)} new videos found", "success")
-    return redirect(url_for("admin_dashboard"))
+    return redirect(url_for("main.admin_dashboard"))
 
 
-@app.route("/admin/news", methods=["POST"])
+@bp.route("/admin/news", methods=["POST"])
 @login_required
 def admin_trigger_news():
     from news_generator import generate_daily_news
     articles = generate_daily_news()
     flash(f"Generated {len(articles)} news article(s)", "success")
-    return redirect(url_for("admin_dashboard"))
+    return redirect(url_for("main.admin_dashboard"))
 
 
-@app.route("/admin/logout")
+@bp.route("/admin/logout")
 @login_required
 def admin_logout():
     logout_user()
-    return redirect(url_for("index"))
+    return redirect(url_for("main.index"))
 
 
 # === API ===
 
-@app.route("/api/health")
+@bp.route("/api/health")
 def health():
     return jsonify({"status": "ok"})
 
 
-# === CLI Commands ===
+# === App Factory ===
 
-@app.cli.command("create-admin")
-def create_admin_cmd():
-    """Create an admin user."""
-    import click
-    email = click.prompt("Email")
-    password = click.prompt("Password", hide_input=True, confirmation_prompt=True)
-    pw_hash = generate_password_hash(password)
-    database.create_admin(email, pw_hash)
-    click.echo(f"Admin created: {email}")
+class AdminUser(UserMixin):
+    def __init__(self, admin_row):
+        self.id = admin_row["id"]
+        self.email = admin_row["email"]
 
+
+def create_app():
+    # When running under a URL prefix, static files must also be prefixed
+    static_path = f"{config.URL_PREFIX}/static" if config.URL_PREFIX else "/static"
+    flask_app = Flask(__name__, static_folder="static", template_folder="templates",
+                      static_url_path=static_path)
+    flask_app.secret_key = config.FLASK_SECRET_KEY
+
+    # Register blueprint with optional URL prefix (e.g. "/sunosmart")
+    flask_app.register_blueprint(bp, url_prefix=config.URL_PREFIX or None)
+
+    # Flask-Login setup
+    login_manager = LoginManager()
+    login_manager.init_app(flask_app)
+    login_manager.login_view = "main.admin_login"
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        conn = database.get_connection()
+        row = conn.execute("SELECT * FROM admins WHERE id = ?", (user_id,)).fetchone()
+        if row:
+            return AdminUser(row)
+        return None
+
+    # Initialize DB and scheduler
+    database.initialize_db()
+    sched_module.init_scheduler()
+
+    # CLI command
+    @flask_app.cli.command("create-admin")
+    def create_admin_cmd():
+        """Create an admin user."""
+        import click
+        email = click.prompt("Email")
+        password = click.prompt("Password", hide_input=True, confirmation_prompt=True)
+        pw_hash = generate_password_hash(password)
+        database.create_admin(email, pw_hash)
+        click.echo(f"Admin created: {email}")
+
+    return flask_app
+
+
+app = create_app()
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

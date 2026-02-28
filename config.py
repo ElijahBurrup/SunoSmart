@@ -10,6 +10,7 @@ CLAUDE_MODEL = "claude-haiku-4-5-20251001"
 # App
 BASE_URL = os.environ.get("BASE_URL", "http://localhost:5000")
 FLASK_SECRET_KEY = os.environ.get("FLASK_SECRET_KEY", "dev-secret-change-me")
+URL_PREFIX = os.environ.get("URL_PREFIX", "")  # e.g. "/sunosmart" for subpath deployment
 
 # Paths — use Render persistent disk if available, else local data/
 if os.environ.get("RENDER"):

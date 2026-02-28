@@ -13,7 +13,7 @@
         {% for article in articles %}
         <div class="article-item">
             <div class="date">{{ article['generated_date'] }}</div>
-            <h3><a href="{{ url_for('news_article', article_id=article['id']) }}">{{ article['title'] }}</a></h3>
+            <h3><a href="{{ url_for('main.news_article', article_id=article['id']) }}">{{ article['title'] }}</a></h3>
             <p>{{ article['summary'] or '' }}</p>
         </div>
         {% endfor %}
@@ -22,17 +22,17 @@
     {% if total_pages > 1 %}
     <div class="pagination">
         {% if page > 1 %}
-            <a href="{{ url_for('news_archive', page=page-1) }}">&laquo; Prev</a>
+            <a href="{{ url_for('main.news_archive', page=page-1) }}">&laquo; Prev</a>
         {% endif %}
         {% for p in range(1, total_pages + 1) %}
             {% if p == page %}
                 <span class="current">{{ p }}</span>
             {% else %}
-                <a href="{{ url_for('news_archive', page=p) }}">{{ p }}</a>
+                <a href="{{ url_for('main.news_archive', page=p) }}">{{ p }}</a>
             {% endif %}
         {% endfor %}
         {% if page < total_pages %}
-            <a href="{{ url_for('news_archive', page=page+1) }}">Next &raquo;</a>
+            <a href="{{ url_for('main.news_archive', page=page+1) }}">Next &raquo;</a>
         {% endif %}
     </div>
     {% endif %}

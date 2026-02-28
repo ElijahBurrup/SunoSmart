@@ -26,10 +26,10 @@
     <div class="admin-card">
         <h3>Quick Actions</h3>
         <div style="display:flex;gap:12px;flex-wrap:wrap">
-            <form method="POST" action="{{ url_for('admin_trigger_scan') }}" style="display:inline">
+            <form method="POST" action="{{ url_for('main.admin_trigger_scan') }}" style="display:inline">
                 <button type="submit" class="btn btn-primary">Run Channel Scan</button>
             </form>
-            <form method="POST" action="{{ url_for('admin_trigger_news') }}" style="display:inline">
+            <form method="POST" action="{{ url_for('main.admin_trigger_news') }}" style="display:inline">
                 <button type="submit" class="btn btn-amber">Generate News</button>
             </form>
         </div>
@@ -38,7 +38,7 @@
     <!-- Add Source -->
     <div class="admin-card">
         <h3>Add Source</h3>
-        <form method="POST" action="{{ url_for('admin_add_source') }}">
+        <form method="POST" action="{{ url_for('main.admin_add_source') }}">
             <label>Source Type</label>
             <select name="type">
                 <option value="channel">YouTube Channel</option>
@@ -87,7 +87,7 @@
                 <td>{{ s['unique_users'] }}</td>
                 <td>{{ s['first_suggested'] }}</td>
                 <td>
-                    <form method="POST" action="{{ url_for('admin_approve_suggestion', normalized=s['normalized_url']) }}" style="display:inline">
+                    <form method="POST" action="{{ url_for('main.admin_approve_suggestion', normalized=s['normalized_url']) }}" style="display:inline">
                         <button type="submit" class="btn btn-primary btn-sm">Approve</button>
                     </form>
                 </td>

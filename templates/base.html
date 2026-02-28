@@ -12,14 +12,14 @@
 <body>
     <nav class="navbar">
         <div class="container nav-inner">
-            <a href="{{ url_for('index') }}" class="nav-brand">
+            <a href="{{ url_for('main.index') }}" class="nav-brand">
                 <span class="brand-icon">&#9835;</span> SunoSmart
             </a>
             <div class="nav-links">
-                <a href="{{ url_for('news_archive') }}">News</a>
+                <a href="{{ url_for('main.news_archive') }}">News</a>
                 {% if current_user.is_authenticated %}
-                    <a href="{{ url_for('admin_dashboard') }}">Dashboard</a>
-                    <a href="{{ url_for('admin_logout') }}">Logout</a>
+                    <a href="{{ url_for('main.admin_dashboard') }}">Dashboard</a>
+                    <a href="{{ url_for('main.admin_logout') }}">Logout</a>
                 {% endif %}
             </div>
         </div>
