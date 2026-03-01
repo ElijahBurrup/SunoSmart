@@ -43,48 +43,66 @@ searchForm.addEventListener('submit', async (e) => {
 });
 
 function renderResults(data) {
-    // Parse the raw answer text — find citations and bare URLs, escape everything else
     const raw = data.answer;
-    const citationRe = /\[(\d+:\d+)\]\s*"([^"]+)"\s*-?\s*(https:\/\/youtube\.com\/watch\?v=[^\s]+)/g;
-    const bareUrlRe = /(https:\/\/youtube\.com\/watch\?v=[^\s]+)/g;
 
-    // First pass: collect all citation spans so we can skip them in the bare-URL pass
-    const citationSpans = [];
-    let m;
-    while ((m = citationRe.exec(raw)) !== null) {
-        citationSpans.push({ start: m.index, end: m.index + m[0].length,
-            ts: m[1], title: m[2], url: m[3] });
-    }
+    // All link patterns matched on RAW text (before HTML escaping)
+    const linkPatterns = [
+        // [MM:SS] "Title" - URL
+        { re: /\[(\d+:\d+)\]\s*"([^"]+)"\s*-?\s*(https:\/\/youtube\.com\/watch\?v=[^\s)]+)/g,
+          render: (m) => `<a href="${m[3]}" target="_blank" rel="noopener" class="yt-link citation-link">&#9654; [${escapeHtml(m[1])}] ${escapeHtml(m[2])}</a>` },
+        // Markdown links [text](url)
+        { re: /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+          render: (m) => `<a href="${m[2]}" target="_blank" rel="noopener" class="yt-link">${escapeHtml(m[1])}</a>` },
+        // Bare YouTube URLs
+        { re: /(https:\/\/youtube\.com\/watch\?v=[^\s)]+)/g,
+          render: (m) => `<a href="${m[1]}" target="_blank" rel="noopener" class="yt-link">${escapeHtml(m[1])}</a>` },
+    ];
 
-    // Build HTML by walking through the text
-    let html = '';
-    let pos = 0;
-
-    function addText(text) {
-        // Within a text segment, linkify bare YouTube URLs that aren't already part of a citation
-        let last = 0;
-        let um;
-        const localRe = new RegExp(bareUrlRe.source, 'g');
-        while ((um = localRe.exec(text)) !== null) {
-            html += escapeHtml(text.substring(last, um.index));
-            html += `<a href="${um[1]}" target="_blank" rel="noopener" class="yt-link">${escapeHtml(um[1])}</a>`;
-            last = um.index + um[0].length;
+    function processLine(line) {
+        // Find all link matches across all patterns, pick the earliest non-overlapping ones
+        const matches = [];
+        for (const pat of linkPatterns) {
+            pat.re.lastIndex = 0;
+            let m;
+            while ((m = pat.re.exec(line)) !== null) {
+                matches.push({ start: m.index, end: m.index + m[0].length, html: pat.render(m) });
+            }
         }
-        html += escapeHtml(text.substring(last));
+        // Sort by position, remove overlaps
+        matches.sort((a, b) => a.start - b.start);
+        const kept = [];
+        for (const m of matches) {
+            if (kept.length === 0 || m.start >= kept[kept.length - 1].end) kept.push(m);
+        }
+        // Build output: escaped text + link HTML
+        let out = '';
+        let pos = 0;
+        for (const m of kept) {
+            if (m.start > pos) out += escapeHtml(line.substring(pos, m.start));
+            out += m.html;
+            pos = m.end;
+        }
+        if (pos < line.length) out += escapeHtml(line.substring(pos));
+
+        // Markdown bold
+        out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        return out;
     }
 
-    for (const span of citationSpans) {
-        // Add any text before this citation
-        if (span.start > pos) addText(raw.substring(pos, span.start));
-        // Add the citation as a clickable link
-        html += `<a href="${span.url}" target="_blank" rel="noopener" class="yt-link citation-link">&#9654; [${escapeHtml(span.ts)}] ${escapeHtml(span.title)}</a>`;
-        pos = span.end;
+    const lines = raw.split('\n');
+    let html = '';
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        // Markdown headers
+        const h1 = trimmed.match(/^#\s+(.*)$/);
+        const h2 = trimmed.match(/^##\s+(.*)$/);
+        const h3 = trimmed.match(/^#{3,}\s+(.*)$/);
+        if (h3) { html += `<p><strong>${processLine(h3[1])}</strong></p>`; }
+        else if (h2) { html += `<h4>${processLine(h2[1])}</h4>`; }
+        else if (h1) { html += `<h3>${processLine(h1[1])}</h3>`; }
+        else { html += `<p>${processLine(trimmed)}</p>`; }
     }
-    // Add remaining text
-    if (pos < raw.length) addText(raw.substring(pos));
-
-    // Convert newlines to paragraphs
-    html = html.split('\n').filter(l => l.trim()).map(l => `<p>${l}</p>`).join('');
 
     let result = `<div class="result-answer">${html}`;
 

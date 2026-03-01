@@ -168,7 +168,7 @@ def search(query):
         # Fallback: send video topic index for best-effort answer
         _ensure_cache()
         topic_index = "\n".join(
-            f"- {info['title']} (video ID: {info['video_id']})"
+            f"- [{info['title']}](https://youtube.com/watch?v={info['video_id']})"
             for info in _video_index.values()
         )
         if config.ANTHROPIC_API_KEY:
@@ -180,7 +180,9 @@ def search(query):
                     f"You are SunoSmart. The user asked: \"{query}\"\n\n"
                     f"No exact transcript matches were found. Here are the videos in our knowledge base:\n{topic_index}\n\n"
                     f"Based on the video titles, suggest which video(s) might contain the answer. "
-                    f"Be honest that you couldn't find an exact match."
+                    f"Be honest that you couldn't find an exact match.\n\n"
+                    f"IMPORTANT: Always include clickable links using the full YouTube URLs provided above. "
+                    f"Use markdown link format: [Video Title](https://youtube.com/watch?v=VIDEO_ID)"
                 )}],
             )
             return {

@@ -57,7 +57,7 @@ def list_channel_videos(channel_url, max_videos=50):
                 "--print", "%(id)s|%(title)s|%(duration)s",
                 f"{channel_url}/videos",
             ],
-            capture_output=True, text=True, timeout=120,
+            capture_output=True, text=True, timeout=300,
         )
         videos = []
         for line in result.stdout.strip().split("\n"):
